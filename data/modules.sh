@@ -4,7 +4,7 @@
 
 # PAGESPEED (automatic optimization module)
 # https://github.com/pagespeed/ngx_pagespeed
-INSTALL_PAGESPEED="no"
+INSTALL_PAGESPEED="yes"
 
 # NAXSI (anti XSS and SQL injection)
 # https://github.com/nbs-system/naxsi

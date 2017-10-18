@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -x 
 
 ## Import software versions
 source 'data/versions.sh'
@@ -12,39 +13,56 @@ OPENSSL="openssl-$OPENSSL_VERSION"
 PCRE="pcre-$PCRE_VERSION"
 ZLIB="zlib-$ZLIB_VERSION"
 
+echo "nginx-$NGINX_VERSION"
+echo "openssl-$OPENSSL_VERSION"
+echo "pcre-$PCRE_VERSION"
+echo "zlib-$ZLIB_VERSION"
+
 ## Go to the local source code directory
 cd /usr/local/src
 
 ## Download Nginx
-wget -q https://nginx.org/download/$NGINX.tar.gz
-tar -xzf $NGINX.tar.gz
-rm -f $NGINX.tar.gz
+if [ -f $NGINX.tar.gz ] ; then
+    wget -q https://nginx.org/download/$NGINX.tar.gz
+    tar -xzf $NGINX.tar.gz
+    rm -f $NGINX.tar.gz
+fi
 
 ## Download OpenSSL
-wget -q https://www.openssl.org/source/$OPENSSL.tar.gz
-tar -xzf $OPENSSL.tar.gz
-rm -f $OPENSSL.tar.gz
+if [ -f $OPENSSL.tar.gz ] ; then
+    wget -q https://www.openssl.org/source/$OPENSSL.tar.gz
+    tar -xzf $OPENSSL.tar.gz
+    rm -f $OPENSSL.tar.gz
+fi
 
 ## Download PCRE
-wget -q https://ftp.pcre.org/pub/pcre/$PCRE.tar.gz
-tar -xzf $PCRE.tar.gz
-rm -f $PCRE.tar.gz
+if [ -f $PCRE.tar.gz ] ; then
+    wget -q https://ftp.pcre.org/pub/pcre/$PCRE.tar.gz
+    tar -xzf $PCRE.tar.gz
+    rm -f $PCRE.tar.gz
+fi
 
 ## Download Zlib
-wget -q https://zlib.net/$ZLIB.tar.gz
-tar -xzf $ZLIB.tar.gz
-rm -f $ZLIB.tar.gz
+if [ -f $ZLIB.tar.gz ] ; then
+    wget -q https://zlib.net/$ZLIB.tar.gz
+    tar -xzf $ZLIB.tar.gz
+    rm -f $ZLIB.tar.gz
+fi
 
 ## Download PageSpeed module (optional)
 if [ ${INSTALL_PAGESPEED} == "yes" ]; then
-	wget -q https://github.com/pagespeed/ngx_pagespeed/archive/v${PAGESPEED_VERSION}-stable.zip
-	unzip -qq v${PAGESPEED_VERSION}-stable.zip
-	rm -f v${PAGESPEED_VERSION}-stable.zip
+        if [ -f v${PAGESPEED_VERSION}-stable.zip ] ; then
+            wget -q https://github.com/pagespeed/ngx_pagespeed/archive/v${PAGESPEED_VERSION}-stable.zip
+            unzip -qq v${PAGESPEED_VERSION}-stable.zip
+            rm -f v${PAGESPEED_VERSION}-stable.zip
+        fi
 
 	cd ngx_pagespeed-${PAGESPEED_VERSION}-stable
-	PSOL_URL=`scripts/format_binary_url.sh PSOL_BINARY_URL`
-	wget -q ${PSOL_URL} -O psol-${PAGESPEED_VERSION}.tar.gz
-	tar xzf psol-${PAGESPEED_VERSION}.tar.gz && rm -f psol-${PAGESPEED_VERSION}.tar.gz
+        if [ -f psol-${PAGESPEED_VERSION}.tar.gz ] ; then
+            PSOL_URL=`scripts/format_binary_url.sh PSOL_BINARY_URL`
+            wget -q ${PSOL_URL} -O psol-${PAGESPEED_VERSION}.tar.gz
+            tar xzf psol-${PAGESPEED_VERSION}.tar.gz && rm -f psol-${PAGESPEED_VERSION}.tar.gz
+        fi
 	cd ..
 
 	PAGESPEED_MODULE="--add-module=../ngx_pagespeed-${PAGESPEED_VERSION}-stable"
@@ -54,7 +72,9 @@ fi
 
 ## Download NAXSI module (optional)
 if [ ${INSTALL_NAXSI} == "yes" ]; then
-	git clone https://github.com/nbs-system/naxsi.git --branch http2
+        if [ -d naxsi ] ; then
+            git clone https://github.com/nbs-system/naxsi.git --branch http2
+        fi
 	NAXSI_MODULE="--add-module=../naxsi/naxsi_src"
 else
 	NAXSI_MODULE=""
@@ -63,24 +83,28 @@ fi
 ## Configure, compile and install
 cd $NGINX
 
+DEBIAN_CFLAGS="$(dpkg-buildflags --get CFLAGS | sed 's/-O3/-O2/') $(dpkg-buildflags --get CPPFLAGS)"
+DEBIAN_LDFLAGS="$(dpkg-buildflags --get LDFLAGS)"
+
 ./configure \
-	${PAGESPEED_MODULE} \
-	${NAXSI_MODULE} \
-	--prefix=/usr/local/nginx \
+        --with-cc-opt="${DEBIAN_CFLAGS}" \
+        --with-ld-opt="${DEBIAN_LDFLAGS}" \
+	--prefix=/usr/share/nginx \
 	--sbin-path=/usr/sbin/nginx \
 	--conf-path=/etc/nginx/nginx.conf \
-	--pid-path=/var/run/nginx.pid \
+	--pid-path=/run/nginx.pid \
 	--error-log-path=/var/log/nginx/error.log \
 	--http-log-path=/var/log/nginx/access.log \
-	--user=nginx \
-	--group=nginx \
-	--lock-path=/var/run/nginx.lock \
+	--user=www-data \
+	--group=www-data \
+	--lock-path=/var/lock/nginx.lock \
 	--modules-path=/usr/lib64/nginx/modules \
-	--http-client-body-temp-path=/var/cache/nginx/client_temp \
-	--http-proxy-temp-path=/var/cache/nginx/proxy_temp \
-	--http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \
-	--http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
-	--http-scgi-temp-path=/var/cache/nginx/scgi_temp \
+        --http-client-body-temp-path=/var/lib/nginx/body \
+        --http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+        --http-proxy-temp-path=/var/lib/nginx/proxy \
+        --http-scgi-temp-path=/var/lib/nginx/scgi \
+        --http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+        --with-debug \
 	--with-compat \
 	--with-file-aio \
 	--with-threads \
@@ -101,18 +125,28 @@ cd $NGINX
 	--with-http_v2_module \
 	--with-mail \
 	--with-mail_ssl_module \
+        --with-stream \
+        --with-stream_realip_module \
+        --with-stream_ssl_module \
+        --with-stream_ssl_preread_module \
+        --with-zlib=/usr/local/src/$ZLIB \
+        --with-ipv6 \
+        --with-http_geoip_module \
+        --with-http_image_filter_module \
+        --with-http_xslt_module \
 	--with-openssl=/usr/local/src/$OPENSSL \
 	--with-pcre=/usr/local/src/$PCRE \
 	--with-pcre-jit \
-	--with-stream \
-	--with-stream_realip_module \
-	--with-stream_ssl_module \
-	--with-stream_ssl_preread_module \
-	--with-zlib=/usr/local/src/$ZLIB \
-	--with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic'
+        ${PAGESPEED_MODULE} \
+        ${NAXSI_MODULE}
+
+## working
+#        --with-cc-opt='-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2'
+## not working - repo default
+#        --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic'
 
 make -j $(nproc)
-make install
+# make install
 
 ## Naxsi rules
 if [ "${INSTALL_NAXSI}" == "yes" ]; then
@@ -138,4 +172,5 @@ fi
 
 ## Cleanup
 cd ..
-rm -rf $NGINX $OPENSSL $PCRE $ZLIB naxsi* ngx_pagespeed-*-stable
+# rm -rf $NGINX $OPENSSL $PCRE $ZLIB naxsi* ngx_pagespeed-*-stable
+
