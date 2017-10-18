@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -x 
+set -e
 
 ## Import software versions
 source 'data/versions.sh'
@@ -22,28 +23,28 @@ echo "zlib-$ZLIB_VERSION"
 cd /usr/local/src
 
 ## Download Nginx
-if [ -f $NGINX.tar.gz ] ; then
+if [ ! -f $NGINX.tar.gz ] ; then
     wget -q https://nginx.org/download/$NGINX.tar.gz
     tar -xzf $NGINX.tar.gz
     rm -f $NGINX.tar.gz
 fi
 
 ## Download OpenSSL
-if [ -f $OPENSSL.tar.gz ] ; then
+if [ ! -f $OPENSSL.tar.gz ] ; then
     wget -q https://www.openssl.org/source/$OPENSSL.tar.gz
     tar -xzf $OPENSSL.tar.gz
     rm -f $OPENSSL.tar.gz
 fi
 
 ## Download PCRE
-if [ -f $PCRE.tar.gz ] ; then
+if [ ! -f $PCRE.tar.gz ] ; then
     wget -q https://ftp.pcre.org/pub/pcre/$PCRE.tar.gz
     tar -xzf $PCRE.tar.gz
     rm -f $PCRE.tar.gz
 fi
 
 ## Download Zlib
-if [ -f $ZLIB.tar.gz ] ; then
+if [ ! -f $ZLIB.tar.gz ] ; then
     wget -q https://zlib.net/$ZLIB.tar.gz
     tar -xzf $ZLIB.tar.gz
     rm -f $ZLIB.tar.gz
@@ -51,14 +52,14 @@ fi
 
 ## Download PageSpeed module (optional)
 if [ ${INSTALL_PAGESPEED} == "yes" ]; then
-        if [ -f v${PAGESPEED_VERSION}-stable.zip ] ; then
+        if [ ! -f v${PAGESPEED_VERSION}-stable.zip ] ; then
             wget -q https://github.com/pagespeed/ngx_pagespeed/archive/v${PAGESPEED_VERSION}-stable.zip
             unzip -qq v${PAGESPEED_VERSION}-stable.zip
             rm -f v${PAGESPEED_VERSION}-stable.zip
         fi
 
 	cd ngx_pagespeed-${PAGESPEED_VERSION}-stable
-        if [ -f psol-${PAGESPEED_VERSION}.tar.gz ] ; then
+        if [ ! -f psol-${PAGESPEED_VERSION}.tar.gz ] ; then
             PSOL_URL=`scripts/format_binary_url.sh PSOL_BINARY_URL`
             wget -q ${PSOL_URL} -O psol-${PAGESPEED_VERSION}.tar.gz
             tar xzf psol-${PAGESPEED_VERSION}.tar.gz && rm -f psol-${PAGESPEED_VERSION}.tar.gz
