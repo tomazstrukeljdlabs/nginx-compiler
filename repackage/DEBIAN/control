@@ -1,0 +1,14 @@
+Package: nginx-full
+Source: nginx
+Version: 1.12.1-1~stable-trusty1-1-pagespeed
+Architecture: amd64
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Installed-Size: 1012
+Conflicts: nginx-core, nginx-extras, nginx-light, nginx-naxsi
+Provides: httpd, httpd-cgi, nginx
+Section: httpd
+Priority: optional
+Homepage: http://nginx.net
+Description: custom build without extra modules
+
+
